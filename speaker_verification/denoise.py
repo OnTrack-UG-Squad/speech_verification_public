@@ -1,7 +1,7 @@
-import numpy as np
-import wave
 import math
+import numpy as np
 import os
+import wave
 
 
 def nextpow2(n):
@@ -68,7 +68,7 @@ def denoise(audio_file, input_path, output_path):
 
     j = 0
     for k in range(1, 6):
-        noise_mean = noise_mean + abs(np.fft.fft(win * x[j : j + len_], nFFT))
+        noise_mean = noise_mean + abs(np.fft.fft(win * x[j: j + len_], nFFT))
         j = j + len_
     noise_mu = noise_mean / 5
 
@@ -82,7 +82,7 @@ def denoise(audio_file, input_path, output_path):
     # Start Processing
     for n in range(0, Nframes):
         # Windowing
-        insign = win * x[k - 1 : k + len_ - 1]
+        insign = win * x[k - 1: k + len_ - 1]
         # compute fourier transform of a frame
         spec = np.fft.fft(insign, nFFT)
         # compute the magnitude
@@ -110,17 +110,17 @@ def denoise(audio_file, input_path, output_path):
         if SNRseg < Thres:  # Update noise spectrum
             noise_temp = G * noise_mu ** Expnt + (1 - G) * sig ** Expnt
             noise_mu = noise_temp ** (1 / Expnt)
-        sub_speech[nFFT // 2 + 1 : nFFT] = np.flipud(sub_speech[1 : nFFT // 2])
+        sub_speech[nFFT // 2 + 1: nFFT] = np.flipud(sub_speech[1: nFFT // 2])
         x_phase = (sub_speech ** (1 / Expnt)) * (
-            np.array([math.cos(x) for x in theta])
-            + img * (np.array([math.sin(x) for x in theta]))
+                np.array([math.cos(x) for x in theta])
+                + img * (np.array([math.sin(x) for x in theta]))
         )
         # take the IFFT
 
         xi = np.fft.ifft(x_phase).real
         # Overlap and add
-        xfinal[k - 1 : k + len2 - 1] = x_old + xi[0:len1]
-        x_old = xi[0 + len1 : len_]
+        xfinal[k - 1: k + len2 - 1] = x_old + xi[0:len1]
+        x_old = xi[0 + len1: len_]
         k = k + len2
 
     with wave.open(output_file_path + "-denoised.wav", "wb") as wf:
@@ -128,4 +128,3 @@ def denoise(audio_file, input_path, output_path):
         wave_data = (winGain * xfinal).astype(np.short)
         wf.writeframes(wave_data.tobytes())
         print(f"writing to {output_file_path}-denoised.wav")
-

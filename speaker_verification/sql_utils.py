@@ -1,9 +1,7 @@
 import io
-from os.path import abspath, dirname, join, exists
-import sqlite3
-
 import numpy as np
-
+import sqlite3
+from os.path import abspath, dirname, join, exists
 
 DATABASE_PATH = join(abspath(dirname(__file__)), "SQL", "sqlite.db")
 
@@ -44,20 +42,23 @@ def read_sqlite_table(table):
     table : str
         Name of table to remove record from.
     """
-    try:
-        sqliteConnection = sqlite3.connect(DATABASE_PATH)
-        cur = sqliteConnection.cursor()
+    if isinstance(table, str):
+        try:
+            sqliteConnection = sqlite3.connect(DATABASE_PATH)
+            cur = sqliteConnection.cursor()
 
-        sqlite_select_query = f"select * from {table}"
-        cur.execute(sqlite_select_query)
-        records = cur.fetchall()
-        for row in records:
-            print("Id: ", row[0])
-            print("mfcc: ", type(row[1]))
-            print("\n")
+            sqlite_select_query = f"select * from {table}"
+            cur.execute(sqlite_select_query)
+            records = cur.fetchall()
+            for row in records:
+                print("Id: ", row[0])
+                print("mfcc: ", type(row[1]))
+                print("\n")
 
-    except sqlite3.Error as error:
-        print("Failed to read data from sqlite table", error)
+        except sqlite3.Error as error:
+            print("Failed to read data from sqlite table", error)
+    else:
+        raise TypeError("Table name must be string")
 
 
 def create_db_table(table):
@@ -70,12 +71,15 @@ def create_db_table(table):
     table : str
         Name of table to create.
     """
-    try:
-        with sqlite3.connect(DATABASE_PATH, detect_types=sqlite3.PARSE_DECLTYPES) as con:
-            cur = con.cursor()
-            cur.execute(f"create table {table}(id integer primary key, arr array)")
-    except Exception as err:
-        print(f"Cannot create table for {table}: ", err)
+    if isinstance(table, str):
+        try:
+            with sqlite3.connect(DATABASE_PATH, detect_types=sqlite3.PARSE_DECLTYPES) as con:
+                cur = con.cursor()
+                cur.execute(f"create table {table}(id integer primary key, arr array)")
+        except Exception as err:
+            print(f"Cannot create table for {table}: ", err)
+    else:
+        raise TypeError("Only strings are allowed")
 
 
 def remove_db_row(table, id):
@@ -90,13 +94,15 @@ def remove_db_row(table, id):
     id : str
         Id key for required record within table for removal.
     """
-    try:
-        with sqlite3.connect(DATABASE_PATH, detect_types=sqlite3.PARSE_DECLTYPES) as con:
-            cur = con.cursor()
-            cur.execute(f"delete from {table} where id={id}")
-
-    except Exception as err:
-        print(f"Database row doesn't exist for id ({id}) in table ({table}): ", err)
+    if isinstance(table, str) and isinstance(id, int):
+        try:
+            with sqlite3.connect(DATABASE_PATH, detect_types=sqlite3.PARSE_DECLTYPES) as con:
+                cur = con.cursor()
+                cur.execute(f"delete from {table} where id={id}")
+        except Exception as err:
+            print(f"Database row doesn't exist for id ({id}) in table ({table}): ", err)
+    else:
+        raise TypeError("Ensure Table and ID are of vaild data type")
 
 
 def select_db_row(table, id):
@@ -111,14 +117,19 @@ def select_db_row(table, id):
     id : str
         Id key for required record within table for selection.
     """
-    try:
-        with sqlite3.connect(DATABASE_PATH, detect_types=sqlite3.PARSE_DECLTYPES) as con:
-            cur = con.cursor()
-            rows = cur.execute(f"select * from {table} where id={id}")
-            for row in rows:
-                return row
-    except Exception as err:
-        print("Database doesn't exist: ", err)
+    id, id_is_int = try_parse_to_int(id)
+
+    if isinstance(table, str) and id_is_int:
+        try:
+            with sqlite3.connect(DATABASE_PATH, detect_types=sqlite3.PARSE_DECLTYPES) as con:
+                cur = con.cursor()
+                rows = cur.execute(f"select * from {table} where id={id}")
+                for row in rows:
+                    return row
+        except Exception as err:
+            print("Database doesn't exist: ", err)
+    else:
+        raise TypeError("Table name must be string and ID must be integer")
 
 
 def insert_db_row(table, id, mfcc):
@@ -130,14 +141,30 @@ def insert_db_row(table, id, mfcc):
     ----------
     table : str
         Name of table to insert record within.
-    id : str
+    id : int
         Id key for required record within table for insertion.
     mfcc : numpy.array
         MFCC dataset to be inserted within database records.
     """
+    length = len(str(id))
+    if length == 9:
+        id, id_is_int = try_parse_to_int(id)
+
+        if isinstance(table, str) and id_is_int:
+            try:
+                with sqlite3.connect(DATABASE_PATH, detect_types=sqlite3.PARSE_DECLTYPES) as con:
+                    cur = con.cursor()
+                    cur.execute(f"insert into {table}(id, arr) values (?, ?)", (id, mfcc,))
+            except Exception as err:
+                print("Database doesn't exist: ", err)
+        else:
+            raise TypeError("Table name must be string and ID must be integer")
+    else:
+        raise Exception("Invalid Input")
+
+
+def try_parse_to_int(value):
     try:
-        with sqlite3.connect(DATABASE_PATH, detect_types=sqlite3.PARSE_DECLTYPES) as con:
-            cur = con.cursor()
-            cur.execute(f"insert into {table}(id, arr) values (?, ?)", (id, mfcc,))
-    except Exception as err:
-        print("Database doesn't exist: ", err)
+        return int(value), True
+    except ValueError:
+        return value, False

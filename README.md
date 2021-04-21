@@ -93,7 +93,7 @@ python37 -m virtualenv ./env_name
 # activate environment
 source ./env_name/bin/activate
 # install environment dependencies by pointing to requirements.txt file
-pip install -r requrements.txt
+pip install -r requirements.txt
 ```
 
 ## Testing

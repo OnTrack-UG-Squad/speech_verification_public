@@ -1,9 +1,7 @@
 import io
-from os.path import abspath, dirname, join, exists
-import sqlite3
-
 import numpy as np
-
+import sqlite3
+from os.path import abspath, dirname, join, exists
 
 DATABASE_PATH = join(abspath(dirname(__file__)), "SQL", "sqlite.db")
 
@@ -59,7 +57,7 @@ def read_sqlite_table(table):
 
         except sqlite3.Error as error:
             print("Failed to read data from sqlite table", error)
-    else: 
+    else:
         raise TypeError("Table name must be string")
 
 
@@ -82,8 +80,6 @@ def create_db_table(table):
             print(f"Cannot create table for {table}: ", err)
     else:
         raise TypeError("Only strings are allowed")
-                
-   
 
 
 def remove_db_row(table, id):
@@ -107,7 +103,6 @@ def remove_db_row(table, id):
             print(f"Database row doesn't exist for id ({id}) in table ({table}): ", err)
     else:
         raise TypeError("Ensure Table and ID are of vaild data type")
-    
 
 
 def select_db_row(table, id):
@@ -122,11 +117,13 @@ def select_db_row(table, id):
     id : str
         Id key for required record within table for selection.
     """
-    if (isinstance(table,str) and isinstance(id,int)):
+    id, id_is_int = try_parse_to_int(id)
+
+    if isinstance(table, str) and id_is_int:
         try:
             with sqlite3.connect(DATABASE_PATH, detect_types=sqlite3.PARSE_DECLTYPES) as con:
                 cur = con.cursor()
-                rows=cur.execute(f"select * from {table} where id={id}")   
+                rows = cur.execute(f"select * from {table} where id={id}")
                 for row in rows:
                     return row
         except Exception as err:
@@ -150,8 +147,10 @@ def insert_db_row(table, id, mfcc):
         MFCC dataset to be inserted within database records.
     """
     length = len(str(id))
-    if length==9:
-        if (isinstance(table,str) and isinstance(id,int) ):
+    if length == 9:
+        id, id_is_int = try_parse_to_int(id)
+
+        if isinstance(table, str) and id_is_int:
             try:
                 with sqlite3.connect(DATABASE_PATH, detect_types=sqlite3.PARSE_DECLTYPES) as con:
                     cur = con.cursor()
@@ -162,3 +161,10 @@ def insert_db_row(table, id, mfcc):
             raise TypeError("Table name must be string and ID must be integer")
     else:
         raise Exception("Invalid Input")
+
+
+def try_parse_to_int(value):
+    try:
+        return int(value), True
+    except ValueError:
+        return value, False
